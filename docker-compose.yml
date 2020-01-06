@@ -1,0 +1,43 @@
+version: '3'
+volumes:
+  postgres_data:
+      driver: local
+      
+services:
+  hydra:
+    build: .
+    command: /usr/bin/start.sh hydra serve all
+    ports:
+      - 6789:6789
+    environment:
+      - PORT=6789
+      - SERVE_ADMIN_HOST=unix:/var/run/admin_socket
+      - SERVE_PUBLIC_HOST=unix:/var/run/public_socket
+      - DATABASE_URL=postgres://hydra:password@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+      - SECRETS_SYSTEM="2KCy8rCYr82MKXcG0IUCsGtWYBW9LyUO"
+      #- FORCE=true
+    depends_on:
+      - postgres
+
+  hydra-migrate:
+    image: oryd/hydra:latest
+    environment:
+      - DSN=postgres://hydra:password@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+      - SECRETS_SYSTEM="2KCy8rCYr82MKXcG0IUCsGtWYBW9LyUO"
+    command:
+      migrate sql -e --yes
+    restart: on-failure
+    depends_on:
+      - postgres
+
+      
+  postgres:
+    image: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: hydra
+      POSTGRES_USER: hydra
+      POSTGRES_PASSWORD: password
+      PGPASSWORD: password
+

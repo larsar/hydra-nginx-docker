@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+psmgr=/tmp/nginx-buildpack-wait
+rm -f $psmgr
+mkfifo $psmgr
+
+ADMIN_SOCKET=/var/run/admin_socket
+PUBLIC_SOCKET=/var/run/public_socket
+export DSN=$DATABASE_URL
+env
+
+# Evaluate config to get $PORT
+#erb config/nginx.conf.erb > config/nginx.conf
+
+n=1
+while getopts :f option ${@:1:2}
+do
+  case "${option}"
+  in
+    f) FORCE=$OPTIND; n=$((n+1));;
+  esac
+done
+
+# Initialize log directory.
+mkdir -p logs/nginx
+touch logs/nginx/access.log logs/nginx/error.log
+echo 'buildpack=nginx at=logs-initialized'
+
+# Start log redirection.
+(
+  # Redirect nginx logs to stdout.
+  tail -qF -n 0 logs/nginx/*.log
+  echo 'logs' >$psmgr
+) &
+
+# Start App Server
+(
+  # Take the command passed to this bin and start it.
+  # E.g. bin/start-nginx bundle exec unicorn -c config/unicorn.rb
+  COMMAND=${@:$n}
+  echo "buildpack=nginx at=start-app cmd=$COMMAND"
+  $COMMAND
+  echo "ETTER OPPSTART"
+  echo 'app' >$psmgr
+) &
+
+sleep 15
+#chmod 666 $ADMIN_SOCKET
+#chmod 666 $PUBLIC_SOCKET
+
+if [[ -z "$FORCE" ]]
+then
+  FILE="/tmp/app-initialized"
+
+  # We block on app-initialized so that when nginx binds to $PORT
+  # are app is ready for traffic.
+  while [[ ! -e "$ADMIN_SOCKET" ]]
+  do
+    echo 'buildpack=nginx at=app-initialization'
+    sleep 1
+  done
+  chmod 666 $ADMIN_SOCKET
+  chmod 666 $PUBLIC_SOCKET
+  echo 'buildpack=nginx at=app-initialized'
+fi
+
+ls -al $ADMIN_SOCKET
+
+# Start nginx
+(
+  # We expect nginx to run in foreground.
+  # We also expect a socket to be at /tmp/nginx.socket.
+  echo 'buildpack=nginx at=nginx-start'
+  /usr/sbin/nginx -p . -c /etc/nginx/nginx.conf
+  echo 'nginx' >$psmgr
+) &
+
+# This read will block the process waiting on a msg to be put into the fifo.
+# If any of the processes defined above should exit,
+# a msg will be put into the fifo causing the read operation
+# to un-block. The process putting the msg into the fifo
+# will use it's process name as a msg so that we can print the offending
+# process to stdout.
+read exit_process <$psmgr
+echo "buildpack=nginx at=exit process=$exit_process"
+exit 1
