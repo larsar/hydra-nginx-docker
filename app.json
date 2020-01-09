@@ -6,7 +6,7 @@
     "addons": ["heroku-postgresql:hobby-dev"],
     "stack": "container",
     "scripts": {
-	"postdeploy": "migrate sql -e --yes",
+	"postdeploy": "hydra migrate sql -e --yes"
     },
     "env": {
 	"SERVE_ADMIN_HOST": "unix:/var/run/admin_socket",
