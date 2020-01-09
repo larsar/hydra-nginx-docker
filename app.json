@@ -1,0 +1,14 @@
+{
+    "name": "Hydra Heroku Example",
+    "description": "Run Hydra in a docker container together with nginx",
+    "repository": "https://github.com/larsar/hydra-nginx-docker",
+    "keywords": ["hydra", "nginx", "docker"],
+    "addons": ["heroku-postgresql:hobby-dev"],
+    "env": {
+	"SERVE_ADMIN_HOST": "unix:/var/run/admin_socket",
+	"SERVE_PUBLIC_HOST": "unix:/var/run/public_socket",
+	"ADMIN_API_USERNAME": "admin",
+        "ADMIN_API_PASSWORD_HASH": "",
+        "SECRETS_SYSTEM": ""
+    }
+}

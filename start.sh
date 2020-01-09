@@ -7,7 +7,28 @@ mkfifo $psmgr
 ADMIN_SOCKET=/var/run/admin_socket
 PUBLIC_SOCKET=/var/run/public_socket
 export DSN=$DATABASE_URL
-env
+
+# Heroku dynos have at least 4 cores.
+worker_processes=${WORKER_PROCESSES:-4}
+
+if [[ -z $PORT ]]; then
+   echo "PORT must be set"
+   exit -1
+fi
+
+if [[ -z $ADMIN_API_USERNAME ]]; then
+   echo "ADMIN_API_USERNAME must be set"
+   exit -1
+fi
+
+if [[ -z $ADMIN_API_PASSWORD_HASH ]]; then
+   echo "ADMIN_API_PASSWORD_HASH must be set"
+   exit -1
+fi
+
+sed -e "s/\${worker_processes}/$worker_processes/" -e "s/\${port}/$PORT/" /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+echo $ADMIN_API_PASSWORD
+echo "${ADMIN_API_USERNAME}:${ADMIN_API_PASSWORD_HASH}" > /etc/nginx/.htpasswd
 
 # Evaluate config to get $PORT
 #erb config/nginx.conf.erb > config/nginx.conf
@@ -44,10 +65,6 @@ echo 'buildpack=nginx at=logs-initialized'
   echo 'app' >$psmgr
 ) &
 
-sleep 15
-#chmod 666 $ADMIN_SOCKET
-#chmod 666 $PUBLIC_SOCKET
-
 if [[ -z "$FORCE" ]]
 then
   FILE="/tmp/app-initialized"
@@ -69,7 +86,6 @@ ls -al $ADMIN_SOCKET
 # Start nginx
 (
   # We expect nginx to run in foreground.
-  # We also expect a socket to be at /tmp/nginx.socket.
   echo 'buildpack=nginx at=nginx-start'
   /usr/sbin/nginx -p . -c /etc/nginx/nginx.conf
   echo 'nginx' >$psmgr
