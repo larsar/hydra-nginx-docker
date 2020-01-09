@@ -78,8 +78,6 @@ then
   echo 'at=app-initialized'
 fi
 
-ls -al $ADMIN_SOCKET
-
 # Start nginx
 (
   # We expect nginx to run in foreground.
