@@ -8,8 +8,11 @@ Generate secrets: $ ./setup.sh
 (Copy the password hash into the .env file. You only need to to this once.)
 
 # Run on Heroku
-Generate an admin password. This must be set as an evironment variable.
+Generate an admin password has for the ADMIN_API_PASSWORD_HASH variable.
 $ docker run -it --rm frapsoft/openssl passwd -apr1
+
+Generate a secret that Hydra requires for the SECRETS_SYSTEM variable.
+$ docker run --rm kciepluc/pwgen-docker 40 1
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/larsar/hydra-nginx-docker)
 
