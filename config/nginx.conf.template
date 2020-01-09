@@ -1,0 +1,59 @@
+daemon off;
+
+worker_processes ${worker_processes};
+
+events {
+	use epoll;
+	accept_mutex on;
+	worker_connections 1024;
+}
+
+http {
+        gzip on;
+        gzip_comp_level 2;
+        gzip_min_length 512;
+
+	server_tokens off;
+
+	log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
+	access_log 'logs/nginx/access.log' l2met;
+	error_log 'logs/nginx/error.log';
+
+	include mime.types;
+	default_type application/octet-stream;
+	sendfile on;
+
+	#Must read the body in 5 seconds.
+	client_body_timeout 5;
+
+	upstream public_server {
+		server unix:/var/run/public_socket fail_timeout=0;
+ 	}
+
+	upstream admin_server {
+		server unix:/var/run/admin_socket fail_timeout=0;
+ 	}
+
+
+	server {
+		listen ${port};
+		server_name _;
+		keepalive_timeout 5;
+
+		location ~ ^/(clients|keys|health|metrics|version|oauth2/auth/requests|oauth2/introspect|oauth2/flush)/ {
+			 auth_basic           "Admin api";
+    			 auth_basic_user_file /etc/nginx/.htpasswd; 
+			 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+			 proxy_set_header Host $http_host;
+			 proxy_redirect off;
+			 proxy_pass http://admin_server;
+		}
+
+		location ~ ^/(.well-known|oauth2/auth|oauth2/token|oauth2/revoke|oauth2/fallbacks/consent|oauth2/fallbacks/error|userinfo)/ {
+			 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+			 proxy_set_header Host $http_host;
+			 proxy_redirect off;
+			 proxy_pass http://public_server;
+		}
+	}
+}
