@@ -7,12 +7,13 @@
     "stack": "container",
     "scripts": {
 	"postdeploy": "migrate sql -e --yes",
-    }
+    },
     "env": {
 	"SERVE_ADMIN_HOST": "unix:/var/run/admin_socket",
 	"SERVE_PUBLIC_HOST": "unix:/var/run/public_socket",
 	"ADMIN_API_USERNAME": "admin",
         "ADMIN_API_PASSWORD_HASH": "",
-        "SECRETS_SYSTEM": ""
+        "SECRETS_SYSTEM": "",
+	"WORKER_PROCESSES": 4
     }
 }
