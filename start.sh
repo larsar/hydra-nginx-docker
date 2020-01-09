@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-psmgr=/tmp/nginx-buildpack-wait
+psmgr=/tmp/nginx-wait
 rm -f $psmgr
 mkfifo $psmgr
 
@@ -30,9 +30,6 @@ sed -e "s/\${worker_processes}/$worker_processes/" -e "s/\${port}/$PORT/" /etc/n
 echo $ADMIN_API_PASSWORD
 echo "${ADMIN_API_USERNAME}:${ADMIN_API_PASSWORD_HASH}" > /etc/nginx/.htpasswd
 
-# Evaluate config to get $PORT
-#erb config/nginx.conf.erb > config/nginx.conf
-
 n=1
 while getopts :f option ${@:1:2}
 do
@@ -45,7 +42,7 @@ done
 # Initialize log directory.
 mkdir -p logs/nginx
 touch logs/nginx/access.log logs/nginx/error.log
-echo 'buildpack=nginx at=logs-initialized'
+echo 'at=logs-initialized'
 
 # Start log redirection.
 (
@@ -59,7 +56,7 @@ echo 'buildpack=nginx at=logs-initialized'
   # Take the command passed to this bin and start it.
   # E.g. bin/start-nginx bundle exec unicorn -c config/unicorn.rb
   COMMAND=${@:$n}
-  echo "buildpack=nginx at=start-app cmd=$COMMAND"
+  echo "at=start-app cmd=$COMMAND"
   $COMMAND
   echo "ETTER OPPSTART"
   echo 'app' >$psmgr
@@ -73,12 +70,12 @@ then
   # are app is ready for traffic.
   while [[ ! -e "$ADMIN_SOCKET" ]]
   do
-    echo 'buildpack=nginx at=app-initialization'
+    echo 'at=app-initialization'
     sleep 1
   done
   chmod 666 $ADMIN_SOCKET
   chmod 666 $PUBLIC_SOCKET
-  echo 'buildpack=nginx at=app-initialized'
+  echo 'at=app-initialized'
 fi
 
 ls -al $ADMIN_SOCKET
@@ -86,7 +83,7 @@ ls -al $ADMIN_SOCKET
 # Start nginx
 (
   # We expect nginx to run in foreground.
-  echo 'buildpack=nginx at=nginx-start'
+  echo 'at=nginx-start'
   /usr/sbin/nginx -p . -c /etc/nginx/nginx.conf
   echo 'nginx' >$psmgr
 ) &
@@ -98,5 +95,5 @@ ls -al $ADMIN_SOCKET
 # will use it's process name as a msg so that we can print the offending
 # process to stdout.
 read exit_process <$psmgr
-echo "buildpack=nginx at=exit process=$exit_process"
+echo "at=exit process=$exit_process"
 exit 1

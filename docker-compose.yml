@@ -22,12 +22,12 @@ services:
       - postgres
 
   hydra-migrate:
-    image: oryd/hydra:latest
+    build: .
     environment:
       - DSN=postgres://hydra:password@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
       - SECRETS_SYSTEM="2KCy8rCYr82MKXcG0IUCsGtWYBW9LyUO"
     command:
-      migrate sql -e --yes
+      hydra migrate sql -e --yes
     restart: on-failure
     depends_on:
       - postgres

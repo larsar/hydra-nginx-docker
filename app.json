@@ -5,6 +5,9 @@
     "keywords": ["hydra", "nginx", "docker"],
     "addons": ["heroku-postgresql:hobby-dev"],
     "stack": "container",
+    "scripts": {
+	"postdeploy": "migrate sql -e --yes",
+    }
     "env": {
 	"SERVE_ADMIN_HOST": "unix:/var/run/admin_socket",
 	"SERVE_PUBLIC_HOST": "unix:/var/run/public_socket",
