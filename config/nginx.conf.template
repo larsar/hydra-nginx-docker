@@ -15,7 +15,7 @@ http {
 
 	server_tokens off;
 
-	log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id $proxy_add_x_forwarded_for';
+	log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
 	access_log 'logs/nginx/access.log' l2met;
 	error_log 'logs/nginx/error.log';
 
@@ -40,10 +40,31 @@ http {
 		server_name _;
 		keepalive_timeout 5;
 
+		set $tls_ok 0;
+
+		# TLS requirement can be overriden when testing locally.
+		set $tls_override ${tls_override};
+		if ($tls_override = 1) {
+		   set $tls_ok 1;
+		}
+
+		# Check if TLS is used in the request that's terminated on the edge proxy.
+		if ($http_x_forwarded_proto = "https") {
+		   set $tls_ok 1;
+		}
+
+		# Return "forbidden" if TLS requirement is not satisfied.
+		if ($tls_ok = 0) {
+		   return 403;
+		}
+
+		
+
 		location ~ ^/(clients|keys|health|metrics|version|oauth2/auth/requests|oauth2/introspect|oauth2/flush)/? {
 			 auth_basic           "Admin api";
     			 auth_basic_user_file /etc/nginx/.htpasswd; 
 			 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+ 			 proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
 			 proxy_set_header Host $http_host;
 			 proxy_redirect off;
 			 proxy_pass http://admin_server;
@@ -52,6 +73,7 @@ http {
 		location ~ ^/(.well-known|oauth2/auth|oauth2/token|oauth2/revoke|oauth2/fallbacks/consent|oauth2/fallbacks/error|userinfo)/? {
 			 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 			 proxy_set_header Host $http_host;
+  			 proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
 			 proxy_redirect off;
 			 proxy_pass http://public_server;
 		}

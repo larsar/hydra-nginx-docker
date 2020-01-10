@@ -11,6 +11,9 @@ export DSN=$DATABASE_URL
 # Heroku dynos have at least 4 cores.
 worker_processes=${WORKER_PROCESSES:-4}
 
+# Set TLS_OVERRIDE variable to 1 if you will allow requests without TLS (most usable for local testing)
+tls_override=${TLS_OVERRIDE:-0}
+
 if [[ -z $PORT ]]; then
    echo "PORT must be set"
    exit -1
@@ -26,8 +29,8 @@ if [[ -z $ADMIN_API_PASSWORD_HASH ]]; then
    exit -1
 fi
 
-sed -e "s/\${worker_processes}/$worker_processes/" -e "s/\${port}/$PORT/" /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
-echo $ADMIN_API_PASSWORD
+
+sed -e "s/\${worker_processes}/$worker_processes/" -e "s/\${tls_override}/$tls_override/" -e "s/\${port}/$PORT/"  /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 echo "${ADMIN_API_USERNAME}:${ADMIN_API_PASSWORD_HASH}" > /etc/nginx/.htpasswd
 
 n=1
