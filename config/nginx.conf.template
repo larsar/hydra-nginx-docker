@@ -15,7 +15,7 @@ http {
 
 	server_tokens off;
 
-	log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
+	log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id $proxy_add_x_forwarded_for';
 	access_log 'logs/nginx/access.log' l2met;
 	error_log 'logs/nginx/error.log';
 
@@ -40,7 +40,7 @@ http {
 		server_name _;
 		keepalive_timeout 5;
 
-		location ~ ^/(clients|keys|health|metrics|version|oauth2/auth/requests|oauth2/introspect|oauth2/flush)/ {
+		location ~ ^/(clients|keys|health|metrics|version|oauth2/auth/requests|oauth2/introspect|oauth2/flush)/? {
 			 auth_basic           "Admin api";
     			 auth_basic_user_file /etc/nginx/.htpasswd; 
 			 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -49,11 +49,17 @@ http {
 			 proxy_pass http://admin_server;
 		}
 
-		location ~ ^/(.well-known|oauth2/auth|oauth2/token|oauth2/revoke|oauth2/fallbacks/consent|oauth2/fallbacks/error|userinfo)/ {
+		location ~ ^/(.well-known|oauth2/auth|oauth2/token|oauth2/revoke|oauth2/fallbacks/consent|oauth2/fallbacks/error|userinfo)/? {
 			 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 			 proxy_set_header Host $http_host;
 			 proxy_redirect off;
 			 proxy_pass http://public_server;
 		}
+
+		# Return 404 unless the request was routed to Hydra.
+		location / {
+			 return 404;
+		}
+
 	}
 }
