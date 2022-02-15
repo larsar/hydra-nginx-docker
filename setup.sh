@@ -6,7 +6,7 @@ if [[ -e .env ]]; then
 fi
 
 echo "Generating random secret for Hydra..."
-secrets_string=`docker run --rm kciepluc/pwgen-docker 40 1`
+secrets_string=`docker run --rm ghcr.io/komed-health/pwgen 40 1`
 
 echo "SECRETS_SYSTEM=$secrets_string" > .env
 echo "Added secret to .env file"
